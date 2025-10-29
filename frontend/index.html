@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador MIC-1</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-container">
+        <div class="window" id="memory-window">
+            <h3>Memória Principal</h3>
+            <table id="memory-table">
+                <thead>
+                    <tr>
+                        <th>Endereço</th>
+                        <th>Hex</th>
+                        <th>Decimal</th>
+                        <th>Binário</th>
+                    </tr>
+                </thead>
+                <tbody id="memory-table-body"></tbody>
+            </table>
+        </div>
+
+        <div class="window" id="programa-window">
+            <h3>Programa</h3>
+            <div class="code-panels">
+                <div class="panel">
+                    <label for="assembly-input">Assembly:</label>
+                    <textarea id="assembly-input" rows="15" placeholder="/ Escreva seu código aqui...&#10;LOCO 10&#10;STOD X"></textarea>
+                </div>
+                <div class="panel">
+                    <label for="compiled-output">Compilado (Hex):</label>
+                    <textarea id="compiled-output" rows="15" readonly></textarea>
+                </div>
+            </div>
+            <div class="program-buttons">
+                <button id="montar-btn">Montar</button>
+                <button id="gravar-mp-btn">Gravar código na MP</button>
+            </div>
+        </div>
+
+        <div class="window" id="processor-window">
+            <h3>Processador</h3>
+            <div class="processor-panels">
+                <div class="panel">
+                    <label>Registradores</label>
+                    <table id="registers-table">
+                        <tbody id="registers-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="panel">
+                    <label>Histórico de Microinstruções</label>
+                    <div id="micro-history-box"></div>
+                </div>
+            </div>
+            <div class="stats-bar">
+                <span>Ciclos: <b id="cycle-count">0</b></span>
+                <span>Tempo de execução: <b id="exec-time">0</b>ms</span>
+            </div>
+        </div>
+
+        <div class="window" id="controls-window">
+            <h3>Controles da Simulação</h3>
+            <div class="control-buttons">
+                <button id="pause-btn">⏸️</button>
+                <button id="play-btn">▶️</button>
+                <button id="reset-btn">🔄</button>
+            </div>
+            <div class="control-group">
+                <label for="speed-input">Pausa entre subciclos (ms):</label>
+                <input type="number" id="speed-input" value="200">
+            </div>
+            <div class="control-group">
+                <label for="breakpoint-input">Pausar automaticamente quando PC:</label>
+                <input type="number" id="breakpoint-input" placeholder="nenhum">
+                <button id="apply-breakpoint-btn">Aplicar</button>
+            </div>
+            <div class="control-group step-mode">
+                <label>Executar em Modo Passo-a-Passo:</label>
+                <button id="next-step-btn">Próximo Microciclo</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
