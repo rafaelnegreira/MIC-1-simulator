@@ -50,8 +50,11 @@ def assemble_code(payload: AssemblyPayload):
     bytecode, error = assemble(payload.source)
     if error:
         raise HTTPException(status_code=400, detail=error)
-    hex_bytecode = [f"{val & 0xFFFF:04X}" for val in bytecode]
-    return {"bytecode": hex_bytecode}
+    
+    # MUDANÇA AQUI: Formata como binário de 16 bits (zeros à esquerda)
+    binary_bytecode = [f"{val & 0xFFFF:016b}" for val in bytecode]
+    
+    return {"bytecode": binary_bytecode}
 
 @app.post("/load", summary="Carregar Bytecode na Memória")
 def load_memory(payload: BytecodePayload):

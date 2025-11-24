@@ -23,10 +23,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateUI(state) {
         if (!state) return;
 
+        // 1. Atualiza a tabela de registradores
         const registersBody = document.getElementById('registers-table-body');
         registersBody.innerHTML = '';
+        
         for (const [reg, val] of Object.entries(state.registers)) {
-            registersBody.innerHTML += `<tr><td>${reg}</td><td>${val}</td></tr>`;
+            let displayValue = val;
+
+            // SE for IR ou TIR, converte para binário de 16 bits
+            if (reg === 'IR' || reg === 'TIR') {
+                // (val & 0xFFFF) garante que números negativos sejam tratados como unsigned de 16 bits
+                // .toString(2) converte para binário
+                // .padStart(16, '0') garante que sempre tenha 16 dígitos (zeros à esquerda)
+                displayValue = (val & 0xFFFF).toString(2).padStart(16, '0');
+            }
+
+            registersBody.innerHTML += `<tr><td>${reg}</td><td>${displayValue}</td></tr>`;
         }
         
         const memoryBody = document.getElementById('memory-table-body');
@@ -74,16 +86,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Gravar o código compilado na memória
     gravarMpBtn.addEventListener('click', async () => {
-        const hexBytecode = compiledOutput.value;
-        if (!hexBytecode) {
+        const binaryBytecode = compiledOutput.value; // Mudamos o nome da variável para evitar confusão
+        if (!binaryBytecode) {
             alert("Primeiro, monte um programa usando o botão 'Montar'.");
             return;
         }
 
-        // Converte o texto hexadecimal de volta para uma lista de números inteiros
-        const bytecodeInts = hexBytecode.split('\n').map(hex => parseInt(hex, 16));
+        // MUDANÇA AQUI: Converte de binário (base 2) para inteiro
+        // Antes era: .map(hex => parseInt(hex, 16));
+        const bytecodeInts = binaryBytecode.split('\n').map(bin => parseInt(bin, 2));
 
         try {
+            // ... (o resto da função continua igual) ...
             const response = await fetch(`${API_BASE_URL}/load`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

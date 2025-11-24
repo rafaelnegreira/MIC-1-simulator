@@ -22,8 +22,8 @@ MICROCODE = {
     8: {"b_bus": "MBR", "c_bus": "AC", "next_addr": 0},
 
     # STOD (0001)
-    9: {"b_bus": "IR", "alu_op": "BAND", "c_bus": "MAR", "next_addr": 10},
-    10: {"a_bus": "AC", "c_bus": "MBR", "mem": "WR", "next_addr": 0},
+    9: {"a_bus": "AMASK", "b_bus": "IR", "alu_op": "BAND", "c_bus": "MAR", "mbr_from_ac": True, "mem": "WR", "next_addr": 10},
+    10: {"mem": "WR", "next_addr": 0},
 
     # ADDD (0010)
     11: {"a_bus": "TIR", "shifter_op": "SLL1", "c_bus": "TIR", "cond_jump": {"if_n": 15}, "next_addr": 12},    

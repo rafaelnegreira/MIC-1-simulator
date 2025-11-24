@@ -1,11 +1,12 @@
 # backend/cpu.py
+
+import ctypes
 from .components import Register, ALU, Shifter, Memory
 from .microcode import MICROCODE
 import time
-import ctypes
 
 class MIC1:
-    """Simula a CPU MIC-1 completa, baseada na arquitetura dos PDFs."""
+    """Simula a CPU MIC-1 completa."""
 
     def __init__(self):
         self.control_store = MICROCODE
@@ -13,35 +14,36 @@ class MIC1:
         self.alu = ALU()
         self.shifter = Shifter()
 
-        # Registradores da arquitetura [cite: 99]
-        self.pc = Register("PC")    # Program Counter [cite: 102]
-        self.ac = Register("AC")    # Accumulator [cite: 103]
-        self.sp = Register("SP")    # Stack Pointer [cite: 104]
-        self.ir = Register("IR")    # Instruction Register [cite: 105]
-        self.tir = Register("TIR")  # Temporary Instruction Register [cite: 106]
-        self.mar = Register("MAR")  # Memory Address Register [cite: 124]
-        self.mbr = Register("MBR")  # Memory Buffer Register [cite: 128]
-        self.a_latch = Register("A_LATCH") # Latch de entrada A para a ALU [cite: 120]
+        # Registradores
+        self.pc = Register("PC")
+        self.ac = Register("AC")
+        self.sp = Register("SP")
+        self.ir = Register("IR")
+        self.tir = Register("TIR")
+        self.mar = Register("MAR")
+        self.mbr = Register("MBR")
+        self.a_latch = Register("A_LATCH")
         
-        # Constantes
-        self.amask = 0b0000111111111111 # 4095
-        
+        # Valor constante para a máscara de endereço (12 bits)
+        self.amask_val = 0b0000111111111111 # 4095
+
         self.all_registers = {
             "PC": self.pc, "AC": self.ac, "SP": self.sp, "IR": self.ir,
             "TIR": self.tir, "MAR": self.mar, "MBR": self.mbr
         }
+        
+        # Inicializa o estado
         self.reset()
 
     def reset(self):
         """Limpa a memória, os registradores e pausa a simulação."""
-        # Limpa todos os registradores
         for reg in self.all_registers.values():
             reg.write(0)
+        
+        # CORREÇÃO: O SP deve iniciar em 4096 para igualar ao Java
+        self.sp.write(4096)
 
-        # Limpa a memória principal
         self.main_memory.clear()
-
-        # Reseta o estado da simulação e contadores
         self.mpc = 0
         self.n_flag, self.z_flag = False, True
         self.is_running, self.stop_flag = False, False
@@ -56,15 +58,16 @@ class MIC1:
             return self.all_registers[source_name].read()
         if source_name == "A_LATCH":
             return self.a_latch.read()
+        if source_name == "AMASK":
+            return self.amask_val
         return 0
 
-    # Em backend/cpu.py
     def step(self):
         """Executa um único ciclo de clock (uma microinstrução)."""
         if not self.is_running or self.stop_flag:
             return
 
-        # 1. Pega a microinstrução atual e atualiza o histórico
+        # 1. Pega a microinstrução atual
         micro_instr = self.control_store.get(self.mpc, {})
         self.micro_history.insert(0, f"{self.mpc}: {micro_instr}")
         if len(self.micro_history) > 50: self.micro_history.pop()
@@ -74,6 +77,8 @@ class MIC1:
         b_bus_val = self._get_bus_value(micro_instr.get("b_bus", "MBR"))
         
         value_to_write = 0
+        
+        # Lógica do Shifter vs ULA
         if "shifter_op" in micro_instr:
             shifter_result = self.shifter.execute(micro_instr["shifter_op"], a_bus_val)
             result_16bit = ctypes.c_int16(shifter_result).value
@@ -92,12 +97,16 @@ class MIC1:
             # Aplica a máscara se a intenção é extrair um operando de 12 bits do IR.
             # Isso acontece em todas as instruções de endereçamento direto, JUMPs e LOCO.
             if self.mpc in [6, 9, 12, 15, 22, 26, 27]:
-                value_to_write &= self.amask
-        
+                 value_to_write &= self.amask_val
+            
             if c_bus_dest in self.all_registers:
                 self.all_registers[c_bus_dest].write(value_to_write)
             elif c_bus_dest == "A_LATCH":
                 self.a_latch.write(value_to_write)
+
+        # CORREÇÃO: Lógica especial para escrever MBR direto do AC (usado no STOD)
+        if micro_instr.get("mbr_from_ac"):
+            self.mbr.write(self.ac.read())
 
         # 4. Operações de Memória
         if micro_instr.get("mem") == "RD":
@@ -132,7 +141,6 @@ class MIC1:
                 "executionTimeMs": int(exec_time * 1000),
             },
             "microHistory": self.micro_history,
-            "memoryView": self.main_memory.get_memory_view(0, 64) # Exibe os primeiros 64 endereços
+            # Retorna os primeiros 64 endereços para visualização
+            "memoryView": self.main_memory.get_memory_view(0, 64) 
         }
-    
-    # ... outros métodos como run, pause, stop, etc.
