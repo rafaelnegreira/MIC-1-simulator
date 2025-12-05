@@ -156,8 +156,7 @@ class MIC1:
         self.mpc.write(next_mpc_val)
         self.cycle_count += 1
 
-        # Breakpoint Check
-        if self.pc.read() == self.breakpoint_pc and self.pc.read() != 0:
+        if self.pc.read() == self.breakpoint_pc and self.pc.read() != 0 and self.mpc.read() == 0:
             self.is_running = False
             self.stop_flag = True
 

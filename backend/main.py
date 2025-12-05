@@ -7,29 +7,23 @@ from .assembler import assemble
 import asyncio
 import time
 
-# --- NOVO: Importar o Middleware de CORS ---
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="MIC-1 Simulator API")
 
-# --- NOVO: Configurar o CORS ---
-# Esta seção permite que o seu frontend (aberto no navegador)
-# se comunique com o seu backend.
 origins = [
     "http://localhost",
     "http://localhost:8080",
-    "null",  # Essencial para permitir requisições de arquivos locais (file://)
+    "null",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Permite todas as origens para simplificar o desenvolvimento
+    allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["*"], # Permite todos os métodos (GET, POST, etc.)
-    allow_headers=["*"], # Permite todos os cabeçalhos
+    allow_methods=["*"], 
+    allow_headers=["*"], 
 )
-# --- FIM DAS NOVAS LINHAS ---
-
 
 simulator = MIC1()
 
@@ -43,15 +37,12 @@ class BytecodePayload(BaseModel):
 class ControlPayload(BaseModel):
     value: int
 
-# --- Endpoints da API (sem alterações a partir daqui) ---
-
 @app.post("/assemble", summary="Montar Código Assembly")
 def assemble_code(payload: AssemblyPayload):
     bytecode, error = assemble(payload.source)
     if error:
         raise HTTPException(status_code=400, detail=error)
     
-    # MUDANÇA AQUI: Formata como binário de 16 bits (zeros à esquerda)
     binary_bytecode = [f"{val & 0xFFFF:016b}" for val in bytecode]
     
     return {"bytecode": binary_bytecode}
@@ -81,9 +72,16 @@ async def run_simulation(control: ControlPayload):
 
 @app.post("/step", summary="Executar Um Ciclo")
 def execute_step():
+    # Se o frontend pediu para andar, forçamos o estado de execução
     simulator.is_running = True
+    
+    # CORREÇÃO: Destravamos o flag de parada para permitir sair do Breakpoint
+    simulator.stop_flag = False 
+    
     simulator.step()
-    simulator.is_running = False
+    return simulator.get_state()
+        
+    simulator.step()
     return simulator.get_state()
 
 @app.post("/pause", summary="Pausar Simulação")

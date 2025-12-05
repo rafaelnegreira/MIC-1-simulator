@@ -151,17 +151,31 @@ document.addEventListener('DOMContentLoaded', () => {
         compiledOutput.value = ''; // Limpa a caixa de compilado
     });
     applyBreakpointBtn.addEventListener('click', async () => {
-        const pcValue = parseInt(breakpointInput.value);
-        if (isNaN(pcValue)) { // Permite breakpoint em 0
-            alert("Por favor, insira um valor de PC válido.");
-            return;
+        const rawValue = breakpointInput.value.trim();
+        let pcValue = -1; // -1 indica "Desativado" para o backend
+
+        // Se não estiver vazio, tentamos converter para número
+        if (rawValue !== "") {
+            pcValue = parseInt(rawValue);
+            
+            // Se escreveu texto que não é número (ex: "abc")
+            if (isNaN(pcValue)) { 
+                alert("Por favor, insira um número válido ou deixe em branco para remover.");
+                return;
+            }
         }
+
         await fetch(`${API_BASE_URL}/set_breakpoint`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ value: pcValue })
         });
-        alert(`Breakpoint aplicado em PC = ${pcValue}`);
+
+        if (pcValue === -1) {
+            alert("Breakpoint removido.");
+        } else {
+            alert(`Breakpoint aplicado em PC = ${pcValue}`);
+        }
     });
 
     // Carregar estado inicial
