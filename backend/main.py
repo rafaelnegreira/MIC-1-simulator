@@ -60,7 +60,7 @@ def assemble_code(payload: AssemblyPayload):
 def load_memory(payload: BytecodePayload):
     simulator.reset()
     for i, instruction in enumerate(payload.bytecode):
-        simulator.main_memory.write(i, instruction)
+        simulator.main_memory.direct_write(i, instruction)
     return {"message": f"{len(payload.bytecode)} palavras carregadas na memória.", "state": simulator.get_state()}
 
 @app.get("/status", summary="Obter Estado Atual")
