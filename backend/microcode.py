@@ -177,3 +177,26 @@ CONTROL_STORE[64] = make_inst(0, 0, 0, REG_AC, 1, 0, 0, 0, 0, SHIFT_NO, ALU_PASS
 
 # Instrução JUMP (para loops funcionarem)
 CONTROL_STORE[26] = make_inst(0, REG_AMASK, REG_IR, REG_PC, 1, 0, 0, 0, 0, SHIFT_NO, ALU_AND, COND_ALWAYS, 0)
+
+# 11: ALU = TIR; if N goto 15 (Separa 0010 ADDD de 0011 SUBD)
+CONTROL_STORE[11] = make_inst(15, REG_ZERO, REG_TIR, 0, 0, 0, 0, 0, 0, SHIFT_NO, ALU_ADD, COND_N, 0)
+
+# Implementação de SUBD (AC = AC - MBR) -> AC = AC + 1 + INV(MBR)
+# 15: MAR = IR; RD
+CONTROL_STORE[15] = make_inst(0, REG_ZERO, REG_IR, 0, 0, 0, 1, 1, 0, SHIFT_NO, ALU_ADD, COND_NO, 0)
+# 16: AC = AC + 1; RD (Wait)
+CONTROL_STORE[16] = make_inst(0, REG_POS1, REG_AC, REG_AC, 1, 0, 1, 0, 0, SHIFT_NO, ALU_ADD, COND_NO, 0)
+# 17: A = INV(MBR)
+CONTROL_STORE[17] = make_inst(0, REG_ZERO, 0, REG_A, 1, 0, 0, 0, 1, SHIFT_NO, ALU_INV_A, COND_NO, 1) # AMUX=1(MBR) -> INV(MBR)
+# 18: AC = AC + A; Goto 0
+CONTROL_STORE[18] = make_inst(0, REG_A, REG_AC, REG_AC, 1, 0, 0, 0, 0, SHIFT_NO, ALU_ADD, COND_ALWAYS, 0)
+
+# --- JNZE (1101) ---
+# Caminho: 2 -> 28 -> 40 -> 41 -> 44
+# 41: ALU = TIR; if N goto 44 (Separa 10xx de 110x)
+CONTROL_STORE[41] = make_inst(44, REG_ZERO, REG_TIR, 0, 0, 0, 0, 0, 0, SHIFT_NO, ALU_ADD, COND_N, 0)
+
+# 44: ALU = AC; if Z goto 0 (Se Zero, NÃO pula. Vai para Fetch)
+CONTROL_STORE[44] = make_inst(0, REG_AC, REG_ZERO, 0, 0, 0, 0, 0, 0, SHIFT_NO, ALU_PASS_A, COND_Z, 0)
+# 45: PC = BAND(IR, AMASK); Goto 0 (Pula)
+CONTROL_STORE[45] = make_inst(0, REG_AMASK, REG_IR, REG_PC, 1, 0, 0, 0, 0, SHIFT_NO, ALU_AND, COND_ALWAYS, 0)

@@ -191,6 +191,15 @@ class MIC1:
 
     def get_state(self) -> dict:
         exec_time = (time.time() - self.execution_start_time) if self.execution_start_time > 0 else 0
+        
+        # --- MUDANÇA AQUI: VISÃO INTELIGENTE ---
+        # Pega as primeiras 128 posições (Código e Variáveis)
+        view_program = self.main_memory.get_memory_view(0, 128)
+        
+        # Pega as últimas 32 posições (Pilha/Stack - endereços 4064 a 4096)
+        # O Stack Pointer começa em 4096 e desce.
+        view_stack = self.main_memory.get_memory_view(4064, 32)
+
         return {
             "registers": {
                 "PC": self.pc.read(), "AC": self.ac.read(), "SP": self.sp.read(),
@@ -204,5 +213,7 @@ class MIC1:
                 "executionTimeMs": int(exec_time * 1000),
             },
             "microHistory": self.micro_history,
-            "memoryView": self.main_memory.get_memory_view(0, 64) 
+            
+            # Combina as duas visões na lista enviada ao front
+            "memoryView": view_program + view_stack 
         }
