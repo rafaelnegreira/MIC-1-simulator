@@ -3,86 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador MIC-1</title>
+    <title>Estúdio MIC-1</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="main-container">
-        <div class="window" id="memory-window">
-            <h3>Memória Principal</h3>
-            <table id="memory-table">
-                <thead>
-                    <tr>
-                        <th>Endereço</th>
-                        <th>Hex</th>
-                        <th>Decimal</th>
-                        <th>Binário</th>
-                    </tr>
-                </thead>
-                <tbody id="memory-table-body"></tbody>
-            </table>
+
+    <header class="toolbar">
+        <div class="brand">
+            <div class="logo-icon">M1</div>
+            <span>Simulador MIC-1</span>
         </div>
 
-        <div class="window" id="programa-window">
-            <h3>Programa</h3>
-            <div class="code-panels">
-                <div class="panel">
-                    <label for="assembly-input">Assembly:</label>
-                    <textarea id="assembly-input" rows="15" placeholder="/ Escreva seu código aqui...&#10;LOCO 10&#10;STOD X"></textarea>
-                </div>
-                <div class="panel">
-                    <label for="compiled-output">Compilado (Hex):</label>
-                    <textarea id="compiled-output" rows="15" readonly></textarea>
-                </div>
-            </div>
-            <div class="program-buttons">
-                <button id="montar-btn">Montar</button>
-                <button id="gravar-mp-btn">Gravar código na MP</button>
-            </div>
-        </div>
-
-        <div class="window" id="processor-window">
-            <h3>Processador</h3>
-            <div class="processor-panels">
-                <div class="panel">
-                    <label>Registradores</label>
-                    <table id="registers-table">
-                        <tbody id="registers-table-body"></tbody>
-                    </table>
-                </div>
-                <div class="panel">
-                    <label>Histórico de Microinstruções</label>
-                    <div id="micro-history-box"></div>
-                </div>
-            </div>
-            <div class="stats-bar">
-                <span>Ciclos: <b id="cycle-count">0</b></span>
-                <span>Tempo de execução: <b id="exec-time">0</b>ms</span>
-            </div>
-        </div>
-
-        <div class="window" id="controls-window">
-            <h3>Controles da Simulação</h3>
-            <div class="control-buttons">
-                <button id="pause-btn">⏸️</button>
-                <button id="play-btn">▶️</button>
-                <button id="reset-btn">🔄</button>
-            </div>
+        <div class="simulation-controls">
             <div class="control-group">
-                <label for="speed-input">Pausa entre subciclos (ms):</label>
-                <input type="number" id="speed-input" value="200">
+                <button id="reset-btn" class="btn-icon danger" title="Resetar">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+                <button id="pause-btn" class="btn-icon warning" title="Pausar">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                </button>
+                <button id="play-btn" class="btn-icon success" title="Executar Automático">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+                <button id="next-step-btn" class="btn-icon secondary" title="Próximo Ciclo">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
             </div>
-            <div class="control-group">
-                <label for="breakpoint-input">Pausar automaticamente quando PC:</label>
-                <input type="number" id="breakpoint-input" placeholder="nenhum">
-                <button id="apply-breakpoint-btn">Aplicar</button>
-            </div>
-            <div class="control-group step-mode">
-                <label>Executar em Modo Passo-a-Passo:</label>
-                <button id="next-step-btn">Próximo Microciclo</button>
+
+            <div class="divider"></div>
+
+            <div class="inputs-row">
+                <div class="input-wrapper">
+                    <label>Velocidade (ms)</label>
+                    <input type="number" id="speed-input" value="400">
+                </div>
+                <div class="input-wrapper">
+                    <label>Breakpoint (PC)</label>
+                    <div class="join-input">
+                        <input type="number" id="breakpoint-input" placeholder="PC">
+                        <button id="apply-breakpoint-btn" class="btn-small">Definir</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+
+        <div class="stats-display">
+            <div class="stat-item">
+                <span class="label">CICLOS</span>
+                <span class="value" id="cycle-count">0</span>
+            </div>
+            </div>
+    </header>
+
+    <main class="workspace">
+        
+        <section class="panel code-panel">
+            <div class="panel-header">
+                <h3>Código Fonte</h3>
+                <div class="actions">
+                    <button id="montar-btn" class="btn-text">Montar</button>
+                </div>
+            </div>
+            <div class="panel-content no-padding">
+                <textarea id="assembly-input" spellcheck="false" placeholder="// Escreva seu código Assembly aqui...&#10;LOCO 10&#10;PUSH"></textarea>
+            </div>
+            
+            <div class="panel-divider"></div>
+
+            <div class="panel-header">
+                <h3>Código de Máquina</h3>
+                <div class="actions">
+                    <button id="gravar-mp-btn" class="btn-text primary">Carregar na Memória</button>
+                </div>
+            </div>
+            <div class="panel-content no-padding">
+                <textarea id="compiled-output" spellcheck="false" readonly placeholder="0000000000000000..."></textarea>
+            </div>
+        </section>
+
+        <section class="panel cpu-panel">
+            <div class="panel-header">
+                <h3>Registradores</h3>
+            </div>
+            <div class="panel-content">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>REG</th>
+                            <th>VAL (DEC / BIN)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="registers-table-body">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="panel-divider"></div>
+
+            <div class="panel-header">
+                <h3>Histórico de Microinstruções</h3>
+            </div>
+            <div class="panel-content no-padding bg-darker">
+                <div id="micro-history-box"></div>
+            </div>
+        </section>
+
+        <section class="panel memory-panel">
+            <div class="panel-header">
+                <h3>Memória Principal</h3>
+            </div>
+            <div class="panel-content no-padding">
+                <table class="data-table memory-table">
+                    <thead>
+                        <tr>
+                            <th>END</th>
+                            <th>HEX</th>
+                            <th>DEC</th>
+                            <th>BIN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="memory-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
 
     <script src="script.js"></script>
 </body>

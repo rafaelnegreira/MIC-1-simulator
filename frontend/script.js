@@ -57,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         document.getElementById('cycle-count').textContent = state.simulation.cycleCount;
-        document.getElementById('exec-time').textContent = state.simulation.executionTimeMs;
         document.getElementById('micro-history-box').innerHTML = state.microHistory.join('<br>');
     }
 
