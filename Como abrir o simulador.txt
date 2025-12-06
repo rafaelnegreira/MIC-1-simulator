@@ -1,0 +1,9 @@
+# MIC-1-simulator
+
+1. Para encapsular o programa use o comando no terminal para gerar a imagem do Simulador:
+docker build -t mic1 .
+
+2. Para rodar a imagem gerada:
+docker run -p 8000:8000 mic1
+
+3. Acesse no navegador http://localhost:8000/
