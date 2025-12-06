@@ -6,6 +6,8 @@ from .cpu import MIC1
 from .assembler import assemble
 import asyncio
 import time
+from fastapi.staticfiles import StaticFiles     
+from fastapi.responses import FileResponse      
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -98,3 +100,10 @@ def reset_simulation():
 def set_breakpoint(control: ControlPayload):
     simulator.breakpoint_pc = control.value
     return {"message": f"Breakpoint set at PC={control.value}."}
+
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+# Diz ao servidor para entregar o index.html quando acessar a raiz "/"
+@app.get("/")
+async def read_index():
+    return FileResponse('frontend/index.html')

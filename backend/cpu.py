@@ -4,6 +4,97 @@ import ctypes
 from .components import Register, ALU, Shifter, Memory, Amux
 from .microcode import CONTROL_STORE
 
+# --- MAPA DE TRADUÇÃO (Micro-Assembly) ---
+# Converte o endereço do MPC para a string legível do PDF/Java
+MICRO_MNEMONICS = {
+    # Busca (Fetch)
+    0: "mar:=pc; rd;",
+    1: "pc:=pc + 1; rd;",
+    2: "ir:=mbr; if n then goto 28;",
+    
+    # Decodificação (Decode)
+    3: "tir:=lshift(ir + ir); if n then goto 19;",
+    4: "tir:=lshift(tir); if n then goto 11;",
+    5: "alu:=tir; if n then goto 9;",
+    
+    # LODD (0000)
+    6: "mar:=ir; rd;",
+    7: "rd;",
+    8: "ac:=mbr; goto 0;",
+    
+    # STOD (0001)
+    9: "mar:=ir; mbr:=ac; wr;",
+    10: "wr; goto 0;",
+    
+    # ADDD (0010)
+    12: "mar:=ir; rd;",
+    13: "rd;",
+    14: "ac:=ac + mbr; goto 0;",
+    
+    # SUBD (0011)
+    11: "alu:=tir; if n then goto 15;", # Decode step
+    15: "mar:=ir; rd;",
+    16: "ac:=ac + 1; rd;",
+    17: "a:=inv(mbr);",
+    18: "ac:=ac + a; goto 0;",
+    
+    # Árvore de Decodificação Estendida
+    19: "tir:=lshift(tir); if n then goto 25;",
+    25: "alu:=tir; if n then goto 27;",
+    
+    # JUMP / JZER / JNEG / LOCO
+    26: "pc:=band(ir, amask); goto 0;", # JUMP
+    27: "ac:=band(ir, amask); goto 0;", # LOCO
+    
+    # Decodificação 1xxx
+    28: "tir:=lshift(ir + ir); if n then goto 40;",
+    29: "tir:=lshift(tir); if n then goto 35;",
+    30: "alu:=tir; if n then goto 33;",
+    35: "alu:=tir; if n then goto 38;",
+    
+    # LODL (1000)
+    31: "a:=ir + sp;",
+    32: "mar:=a; rd; goto 7;",
+    
+    # STOL (1001)
+    33: "a:=ir + sp;",
+    34: "mar:=a; mbr:=ac; wr; goto 10;",
+    
+    # ADDL (1010)
+    36: "a:=ir + sp;",
+    37: "mar:=a; rd; goto 13;",
+    
+    # SUBL (1011)
+    38: "a:=ir + sp;",
+    39: "mar:=a; rd; goto 16;",
+    
+    # Decodificação Complexa (11xx)
+    40: "tir:=lshift(tir); if n then goto 46;",
+    41: "alu:=tir; if n then goto 44;",
+    44: "alu:=ac; if z then goto 0;", # JNZE check
+    45: "pc:=band(ir, amask); goto 0;", # JNZE jump
+    
+    46: "tir:=lshift(tir); if n then goto 50;",
+    50: "tir:=lshift(tir); if n then goto 65;",
+    51: "tir:=lshift(tir); if n then goto 59;",
+    59: "alu:=tir; if n then goto 62;",
+    
+    # PUSH (1111 0100)
+    60: "sp:=sp + (-1);",
+    61: "mar:=sp; mbr:=ac; wr; goto 10;",
+    
+    # POP (1111 0110)
+    62: "mar:=sp; sp:=sp + 1; rd;",
+    63: "rd;",
+    64: "ac:=mbr; goto 0;",
+    
+    # SWAP / RETN placeholder
+    65: "tir:=lshift(tir); if n then goto 73;",
+    70: "a:=ac;",
+    71: "ac:=sp;",
+    72: "sp:=a; goto 0;"
+}
+
 class MIC1:
     def __init__(self):
         self.control_store = CONTROL_STORE
@@ -12,10 +103,10 @@ class MIC1:
         self.shifter = Shifter()
         self.amux = Amux()
 
-        # Registradores (Indices fixos para acesso via Barramento)
+        # Registradores
         self.registers = [Register(f"R{i}") for i in range(16)]
         
-        # Aliases para facilitar leitura no código
+        # Aliases
         self.pc = self.registers[0]; self.pc.name = "PC"
         self.ac = self.registers[1]; self.ac.name = "AC"
         self.sp = self.registers[2]; self.sp.name = "SP"
@@ -26,24 +117,20 @@ class MIC1:
         self.minus1 = self.registers[7]; self.minus1.name = "-1"
         self.amask = self.registers[8]; self.amask.name = "AMASK"
         self.smask = self.registers[9]; self.smask.name = "SMASK"
-        # Registradores A-F (10-15)
         for i, name in enumerate("ABCDEF", 10):
             self.registers[i].name = name
 
-        # Registradores Especiais (fora do banco geral)
         self.mar = Register("MAR")
         self.mbr = Register("MBR")
-        self.mpc = Register("MPC") # Micro Program Counter
-        self.mir = 0 # Micro Instruction Register (int 32 bits)
+        self.mpc = Register("MPC")
+        self.mir = 0
 
-        # Latches internos
         self.latch_a = 0
         self.latch_b = 0
         
         self.reset()
 
     def reset(self):
-        # Zera registradores (exceto constantes)
         for i in [0, 1, 3, 4] + list(range(10, 16)):
             self.registers[i].write(0)
         
@@ -61,7 +148,6 @@ class MIC1:
         
         self.main_memory.clear()
         
-        # Flags de controle de simulação
         self.is_running = False
         self.stop_flag = False
         self.cycle_count = 0
@@ -69,7 +155,6 @@ class MIC1:
         self.micro_history = []
         self.breakpoint_pc = -1
         
-        # Flags da ALU
         self.n_flag = False
         self.z_flag = False
 
@@ -77,20 +162,21 @@ class MIC1:
         return (self.mir >> shift) & mask
 
     def step(self):
-        """Executa um ciclo completo de clock (4 subciclos)"""
         if not self.is_running or self.stop_flag:
             return
 
-        # Busca Microinstrução
-        self.mir = self.control_store[self.mpc.read()]
+        # 1. Busca MIR
+        current_mpc = self.mpc.read()
+        self.mir = self.control_store[current_mpc]
         
-        # Histórico para o Frontend (Decodifica o binário para texto)
-        decoded_str = self.decode_current_microinstruction()
-        self.micro_history.insert(0, f"{self.mpc.read()}: {decoded_str}")
+        # 2. Histórico formatado (Usa o dicionário ou o decodificador genérico)
+        decoded_str = MICRO_MNEMONICS.get(current_mpc, self.decode_generic_microinstruction())
+        
+        # Formata com o número da linha: "0: mar:=pc; rd;"
+        self.micro_history.insert(0, f"{current_mpc}: {decoded_str}")
         if len(self.micro_history) > 50: self.micro_history.pop()
 
         # --- Subciclo 1: Memoria ---
-        # Verifica se houve pedido de leitura/escrita no ciclo ANTERIOR
         self.main_memory.access(self.mbr)
 
         # --- Subciclo 2: Decodificação e Latches ---
@@ -105,17 +191,12 @@ class MIC1:
         sh_sig = self._get_field(25, 0x3)
         mar_load = self._get_field(23, 0x1)
 
-        # Amux seleciona entre Latch A e MBR
         amux_out = self.amux.decide_output(amux_sig, self.latch_a, self.mbr.read())
         
-        # Carga do MAR (ocorre na borda de subida do sub3)
         if mar_load == 1:
             self.mar.write(self.latch_b)
 
-        # ALU Execute
         alu_out, self.n_flag, self.z_flag = self.alu.execute(alu_sig, amux_out, self.latch_b)
-        
-        # Shifter Execute
         c_bus = self.shifter.execute(sh_sig, alu_out)
 
         # --- Subciclo 4: Writeback e Prox Endereço ---
@@ -125,21 +206,17 @@ class MIC1:
         rd_sig = self._get_field(22, 0x1)
         mbr_load = self._get_field(24, 0x1)
 
-        # Escrita no Banco de Registradores
         if enc == 1:
             self.registers[c_addr].write(c_bus)
         
-        # Escrita no MBR (pelo barramento C)
         if mbr_load == 1:
             self.mbr.write(c_bus)
 
-        # Sinais de Memória (para o PRÓXIMO ciclo)
         if rd_sig == 1:
             self.main_memory.enable_read(self.mar.read())
         if wr_sig == 1:
             self.main_memory.enable_write(self.mar.read())
 
-        # Cálculo do Próximo MPC
         cond = self._get_field(29, 0x3)
         jump_addr = self._get_field(0, 0xFF)
         
@@ -156,13 +233,13 @@ class MIC1:
         self.mpc.write(next_mpc_val)
         self.cycle_count += 1
 
+        # Breakpoint Check
         if self.pc.read() == self.breakpoint_pc and self.pc.read() != 0 and self.mpc.read() == 0:
             self.is_running = False
             self.stop_flag = True
 
-    def decode_current_microinstruction(self) -> str:
-        """Gera string descritiva para o frontend baseada nos bits do MIR atual"""
-        # Extrai campos
+    def decode_generic_microinstruction(self) -> str:
+        """Fallback para quando não houver mnemônico definido"""
         bus_a = self.registers[self._get_field(8, 0xF)].name
         bus_b = self.registers[self._get_field(12, 0xF)].name
         bus_c = self.registers[self._get_field(16, 0xF)].name
@@ -176,27 +253,17 @@ class MIC1:
         alu_map = {0: "ADD", 1: "AND", 2: "PASS_A", 3: "INV_A"}
         op = alu_map[alu_op_code]
         
-        # Monta string estilo "ADD(AC, PC) -> AC"
         input_a = "MBR" if amux else bus_a
         action = f"{op}({input_a}, {bus_b})"
-        
-        if enc:
-            action += f" -> {bus_c}"
-            
-        if mem:
-            action += f" [{mem}]"
+        if enc: action += f" -> {bus_c}"
+        if mem: action += f" [{mem}]"
             
         return action
 
     def get_state(self) -> dict:
         exec_time = (time.time() - self.execution_start_time) if self.execution_start_time > 0 else 0
         
-        # --- MUDANÇA AQUI: VISÃO INTELIGENTE ---
-        # Pega as primeiras 128 posições (Código e Variáveis)
         view_program = self.main_memory.get_memory_view(0, 128)
-        
-        # Pega as últimas 32 posições (Pilha/Stack - endereços 4064 a 4096)
-        # O Stack Pointer começa em 4096 e desce.
         view_stack = self.main_memory.get_memory_view(4064, 32)
 
         return {
@@ -212,7 +279,5 @@ class MIC1:
                 "executionTimeMs": int(exec_time * 1000),
             },
             "microHistory": self.micro_history,
-            
-            # Combina as duas visões na lista enviada ao front
             "memoryView": view_program + view_stack 
         }
