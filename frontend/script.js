@@ -32,9 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // SE for IR ou TIR, converte para binário de 16 bits
             if (reg === 'IR' || reg === 'TIR') {
-                // (val & 0xFFFF) garante que números negativos sejam tratados como unsigned de 16 bits
-                // .toString(2) converte para binário
-                // .padStart(16, '0') garante que sempre tenha 16 dígitos (zeros à esquerda)
+
                 displayValue = (val & 0xFFFF).toString(2).padStart(16, '0');
             }
 

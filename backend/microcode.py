@@ -47,9 +47,7 @@ def make_inst(addr_jump, bus_a, bus_b, bus_c, enc, wr, rd, mar, mbr, sh, alu, co
 
 CONTROL_STORE = [0] * 512
 
-# ==============================================================================
 # MICROPROGRAMA (Baseado no MIC-1 Tanenbaum)
-# ==============================================================================
 
 # --- BUSCA (FETCH) ---
 # 0: MAR = PC; RD
@@ -62,7 +60,7 @@ CONTROL_STORE[2] = make_inst(28, 0, 0, REG_IR, 1, 0, 0, 0, 0, SHIFT_NO, ALU_PASS
 # ==============================================================================
 # RAMO ESQUERDO (Bit 15 = 0) - Instruções 0xxx (LODD, STOD, ADDD...)
 # ==============================================================================
-# 3: TIR = LSHIFT(IR + IR); if N goto 19 (Separa 0xxx de 1xxx - ERRO NO PDF, aqui separa 00xx/01xx)
+# 3: TIR = LSHIFT(IR + IR); if N goto 19 (Separa 0xxx de 1xxx)
 CONTROL_STORE[3] = make_inst(19, REG_IR, REG_IR, REG_TIR, 1, 0, 0, 0, 0, SHIFT_LEFT, ALU_ADD, COND_N, 0)
 
 # 4: TIR = LSHIFT(TIR); if N goto 11 (Separa 00xx de 01xx)
@@ -146,17 +144,17 @@ CONTROL_STORE[14] = make_inst(0, REG_AC, REG_AC, REG_AC, 1, 0, 0, 0, 0, SHIFT_NO
 CONTROL_STORE[27] = make_inst(0, REG_AMASK, REG_IR, REG_AC, 1, 0, 0, 0, 0, SHIFT_NO, ALU_AND, COND_ALWAYS, 0) # AC=IR&AMASK
 
 # --- LODL (1000) - Load Local ---
-# 31: A = SP + IR; Goto 32 (CORREÇÃO: Antes estava 0, deve ser 32)
+# 31: A = SP + IR; Goto 32 
 CONTROL_STORE[31] = make_inst(32, REG_SP, REG_IR, REG_A, 1, 0, 0, 0, 0, SHIFT_NO, ALU_ADD, COND_ALWAYS, 0)
 
-# 32: MAR = A; RD; Goto 7 (Reaproveita final de LODD)
+# 32: MAR = A; RD; Goto 7
 CONTROL_STORE[32] = make_inst(7, REG_ZERO, REG_A, 0, 0, 0, 1, 1, 0, SHIFT_NO, ALU_ADD, COND_ALWAYS, 0)
 
 # --- ADDL (1010) - Add Local ---
-# 36: A = SP + IR; Goto 37 (CORREÇÃO: Antes estava 0, deve ser 37)
+# 36: A = SP + IR; Goto 37 
 CONTROL_STORE[36] = make_inst(37, REG_SP, REG_IR, REG_A, 1, 0, 0, 0, 0, SHIFT_NO, ALU_ADD, COND_ALWAYS, 0)
 
-# 37: MAR = A; RD; Goto 13 (Reaproveita final de ADDD)
+# 37: MAR = A; RD; Goto 13 
 CONTROL_STORE[37] = make_inst(13, REG_ZERO, REG_A, 0, 0, 0, 1, 1, 0, SHIFT_NO, ALU_ADD, COND_ALWAYS, 0)
 
 # --- PUSH (1111 0100) ---
@@ -167,7 +165,6 @@ CONTROL_STORE[60] = make_inst(0, REG_NEG1, REG_SP, REG_SP, 1, 0, 0, 0, 0, SHIFT_
 CONTROL_STORE[61] = make_inst(10, REG_AC, REG_SP, 0, 0, 1, 0, 1, 1, SHIFT_NO, ALU_PASS_A, COND_ALWAYS, 0)
 
 # --- POP (1111 0110) ---
-# Caminho: 2 -> 28 -> 40 -> 46 -> 50 -> 51 -> 59 -> 62
 # 62: MAR = SP; SP = SP + 1; RD [cite: 2]
 CONTROL_STORE[62] = make_inst(0, REG_POS1, REG_SP, REG_SP, 1, 0, 1, 1, 0, SHIFT_NO, ALU_ADD, COND_NO, 0)
 # 63: RD (Wait) [cite: 2]
@@ -196,7 +193,7 @@ CONTROL_STORE[18] = make_inst(0, REG_A, REG_AC, REG_AC, 1, 0, 0, 0, 0, SHIFT_NO,
 # 41: ALU = TIR; if N goto 44 (Separa 10xx de 110x)
 CONTROL_STORE[41] = make_inst(44, REG_ZERO, REG_TIR, 0, 0, 0, 0, 0, 0, SHIFT_NO, ALU_ADD, COND_N, 0)
 
-# 44: ALU = AC; if Z goto 0 (Se Zero, NÃO pula. Vai para Fetch)
+# 44: ALU = AC; if Z goto 0 
 CONTROL_STORE[44] = make_inst(0, REG_AC, REG_ZERO, 0, 0, 0, 0, 0, 0, SHIFT_NO, ALU_PASS_A, COND_Z, 0)
 # 45: PC = BAND(IR, AMASK); Goto 0 (Pula)
 CONTROL_STORE[45] = make_inst(0, REG_AMASK, REG_IR, REG_PC, 1, 0, 0, 0, 0, SHIFT_NO, ALU_AND, COND_ALWAYS, 0)
