@@ -1,11 +1,9 @@
-# backend/cpu.py
 import time
 import ctypes
 from .components import Register, ALU, Shifter, Memory, Amux
 from .microcode import CONTROL_STORE
 
 # --- MAPA DE TRADUÇÃO (Micro-Assembly) ---
-# Converte o endereço do MPC para a string legível do PDF/Java
 MICRO_MNEMONICS = {
     # Busca (Fetch)
     0: "mar:=pc; rd;",

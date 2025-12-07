@@ -1,6 +1,3 @@
-# backend/microcode.py
-
-# --- Definições de Hardware ---
 REG_PC = 0
 REG_AC = 1
 REG_SP = 2
@@ -86,15 +83,12 @@ CONTROL_STORE[25] = make_inst(27, REG_ZERO, REG_TIR, 0, 0, 0, 0, 0, 0, SHIFT_NO,
 CONTROL_STORE[28] = make_inst(40, REG_IR, REG_IR, REG_TIR, 1, 0, 0, 0, 0, SHIFT_LEFT, ALU_ADD, COND_N, 0)
 
 # 29: TIR = LSHIFT(TIR); if N goto 35 (Separa 100x [LODL/STOL] de 101x [ADDL/SUBL])
-# [cite_start]Fonte: PDF Pag 3, linha 29 [cite: 161]
 CONTROL_STORE[29] = make_inst(35, REG_ZERO, REG_TIR, REG_TIR, 1, 0, 0, 0, 0, SHIFT_LEFT, ALU_ADD, COND_N, 0)
 
 # 30: ALU = TIR; if N goto 33 (Separa LODL 1000 de STOL 1001)
-# Se N (bit 1), vai para 33 (STOL). Se não, cai em 31 (LODL).
 CONTROL_STORE[30] = make_inst(33, REG_ZERO, REG_TIR, 0, 0, 0, 0, 0, 0, SHIFT_NO, ALU_ADD, COND_N, 0)
 
 # 35: ALU = TIR; if N goto 38 (Separa ADDL 1010 de SUBL 1011)
-# Se N (bit 1), vai para 38 (SUBL). Se não, cai em 36 (ADDL).
 CONTROL_STORE[35] = make_inst(38, REG_ZERO, REG_TIR, 0, 0, 0, 0, 0, 0, SHIFT_NO, ALU_ADD, COND_N, 0)
 
 # 40: TIR = LSHIFT(TIR); if N goto 46 (Separa 100x/101x de 11xx) 

@@ -1,4 +1,3 @@
-# backend/components.py
 import ctypes
 
 class Register:
@@ -20,7 +19,6 @@ class Amux:
         return latch_a
 
 class ALU:
-    # Códigos baseados estritamente em ALU.java
     ADD = 0b00
     AND = 0b01
     PASS_A = 0b10
@@ -51,16 +49,12 @@ class ALU:
         return res_c.value, n_flag, z_flag
 
 class Shifter:
-    # Códigos baseados em Shifter.java (atenção aos códigos do PDF/Java)
-    # No Java: 00=No, 01=Right, 10=Left. 
-    # Porém, no PDF às vezes varia. Vamos usar a lógica do Java fornecido.
     NO_SHIFT = 0b00
     RIGHT_SHIFT = 0b01
     LEFT_SHIFT = 0b10
 
     def execute(self, op: int, data: int) -> int:
         # Trata como unsigned 16 bits para shifts lógicos se necessário, 
-        # mas Java faz arithmetic shift right (>>).
         val = ctypes.c_int16(data).value
         
         result = val
@@ -76,7 +70,7 @@ class Memory:
         self.size = size
         self.data = [ctypes.c_int16(0) for _ in range(size)]
         
-        # Simulação de latches de memória (como no Java)
+        # Simulação de latches de memória
         self.read_enable = False
         self.write_enable = False
         self.address_latch = 0
